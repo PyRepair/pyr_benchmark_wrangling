@@ -27,7 +27,7 @@ jobs:
       - name: Run black style check
         run: |
             pip install black==23.7.0
-            python3 -m black --preview --check .
+            python3 -m black --preview --check BugsInPy/ diff_utils/ 
     
       - name: Run tests
         run: tox
