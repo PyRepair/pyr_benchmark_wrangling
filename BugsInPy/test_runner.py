@@ -264,7 +264,9 @@ def convert_unittest_to_pytest(repo_path: Path, command: str) -> str:
     return "pytest " + " ".join(pytest_commands)
 
 
-def get_test_command(failing_test_commands, timeout, xml_output, python_path, repo_path):
+def get_test_command(
+    failing_test_commands, timeout, xml_output, python_path, repo_path
+):
     failing_test_commands = failing_test_commands.replace("python -m", "")
     failing_test_commands = failing_test_commands.replace("python3 -m", "")
     if "tox" in failing_test_commands:
