@@ -30,7 +30,7 @@ def test_instrument(mock_file):
 
     # Check the written content
     written_content = handle.write.call_args[0][0]
-    assert written_content.count("file.seek(0)") == 2
+    assert written_content.count("fabcd_nonsense.close()") == 2
 
 
 @patch(
@@ -126,14 +126,17 @@ def test_instrument_large_function(mock_file):
     end = "end"
     # Adding multiple print points
     instrumentor.add_print_point("_maybe_empty_lines", 2, vars, start)
+    instrumentor.add_print_point("_maybe_empty_lines", 21, vars, end)
+    instrumentor.add_print_point("_maybe_empty_lines", 22, vars, end)
     instrumentor.add_print_point("_maybe_empty_lines", 23, vars, end)
-    instrumentor.add_print_point("_maybe_empty_lines", 26, vars, end)
-    instrumentor.add_print_point("_maybe_empty_lines", 30, vars, end)
-    instrumentor.add_print_point("_maybe_empty_lines", 35, vars, end)
-    instrumentor.add_print_point("_maybe_empty_lines", 37, vars, end)
-    instrumentor.add_print_point("_maybe_empty_lines", 44, vars, end)
-    instrumentor.add_print_point("_maybe_empty_lines", 50, vars, end)
+    instrumentor.add_print_point("_maybe_empty_lines", 24, vars, end)
+    instrumentor.add_print_point("_maybe_empty_lines", 27, vars, end)
+    instrumentor.add_print_point("_maybe_empty_lines", 31, vars, end)
+    instrumentor.add_print_point("_maybe_empty_lines", 36, vars, end)
+    instrumentor.add_print_point("_maybe_empty_lines", 38, vars, end)
+    instrumentor.add_print_point("_maybe_empty_lines", 45, vars, end)
     instrumentor.add_print_point("_maybe_empty_lines", 51, vars, end)
+    instrumentor.add_print_point("_maybe_empty_lines", 52, vars, end)
 
     instrumentor.instrument()
 
@@ -144,4 +147,5 @@ def test_instrument_large_function(mock_file):
     written_content = handle.write.call_args[0][0]
     # Assert that the expected print points are inserted
     # The exact content to assert will depend on your specific implementation
-    assert written_content.count("file.seek(0)") == 9
+    print(written_content)
+    assert written_content.count("fabcd_nonsense.close()") == 18
