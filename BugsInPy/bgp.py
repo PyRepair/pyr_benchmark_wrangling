@@ -30,7 +30,13 @@ from typing import Dict, List
 from BugsInPy.class_extractor import extract_classes
 from BugsInPy.feature_extractor import extract_features
 from BugsInPy.bgp_config import BGPConfig, BugRecord
-from BugsInPy.test_runner import prep, run_test, ignore_venv, TestStatus
+from BugsInPy.test_runner import (
+    get_test_command_and_env,
+    prep,
+    run_test,
+    ignore_venv,
+    TestStatus,
+)
 
 import argparse
 
@@ -204,6 +210,7 @@ def main():
             "prep_ignore_venv",
             "update_bug_records",
             "delete_bug_repo",
+            "get_test_command",
         ],
         help="Command to execute",
     )
@@ -362,6 +369,17 @@ def main():
                 test_status = updated_test_status_record["test_status"]
                 if test_status != TestStatus.PASS:
                     total_failed.append((bug_id, test_status))
+            case "get_test_command":
+                env, test_command = get_test_command_and_env(
+                    bug_id,
+                    repo_path,
+                    bug_record,
+                    test_status_record,
+                    args.timeout,
+                    pip_output_redirection,
+                    separate_envs=separate_envs,
+                )
+                print(f"Python Path:{env}\ntest_command:{test_command}")
             case "prep_ignore_venv":
                 ignore_venv(repo_path)
             case "run_test":

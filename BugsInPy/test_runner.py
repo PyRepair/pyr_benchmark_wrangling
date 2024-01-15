@@ -264,22 +264,7 @@ def convert_unittest_to_pytest(repo_path: Path, command: str) -> str:
     return "pytest " + " ".join(pytest_commands)
 
 
-def run_test(
-    bug_id: str,
-    repo_path: Path,
-    python_path: str,
-    failing_test_commands: str,
-    failing=True,
-    timeout=None,
-    xml_output=None,
-    test_output_stdout=None,
-) -> int:
-    """Run the specified test on a checked out project."""
-
-    # We change directories instead of using absolute paths b/c some tools,
-    # notably tox, require relative paths.
-    current_path = os.getcwd()
-    os.chdir(repo_path)
+def get_test_command(failing_test_commands, timeout, xml_output, python_path):
     failing_test_commands = failing_test_commands.replace("python -m", "")
     failing_test_commands = failing_test_commands.replace("python3 -m", "")
     if "tox" in failing_test_commands:
@@ -302,19 +287,41 @@ def run_test(
 
     # Form the complete pytest command
     if xml_output:
-        test_commands = (
+        test_command = (
             f"{python_path} -m pytest {test_names_str} --timeout={timeout} -vv"
             f" --junit-xml={xml_output}"
         )
     else:
-        test_commands = (
+        test_command = (
             f"{python_path} -m pytest {test_names_str} --timeout={timeout} -vv"
         )
+    return test_command
+
+
+def run_test(
+    bug_id: str,
+    repo_path: Path,
+    python_path: str,
+    failing_test_commands: str,
+    failing=True,
+    timeout=None,
+    xml_output=None,
+    test_output_stdout=None,
+) -> int:
+    """Run the specified test on a checked out project."""
+
+    # We change directories instead of using absolute paths b/c some tools,
+    # notably tox, require relative paths.
+    current_path = os.getcwd()
+    os.chdir(repo_path)
+    test_command = get_test_command(
+        failing_test_commands, timeout, xml_output, python_path
+    )
     failed_as_expected = False
     returncode = 0
     try:
         result = subprocess.run(
-            test_commands,
+            test_command,
             shell=True,
             check=True,
             timeout=BGPConfig.TIMEOUT_MULTIPLIER * timeout,
@@ -340,17 +347,17 @@ def run_test(
     if failing:
         if failed_as_expected:
             logging.info(
-                f"Bug {bug_id}:  Command '{test_commands}' failed"
+                f"Bug {bug_id}:  Command '{test_command}' failed"
                 f" as expected with result {returncode}."
             )
         else:
             logging.error(
-                f"Bug {bug_id}:  Command '{test_commands}'"
+                f"Bug {bug_id}:  Command '{test_command}'"
                 f" unexpectedly passed with result {returncode}."
             )
     else:
         logging.info(
-            f"Bug {bug_id}:  Command '{test_commands}' ran"
+            f"Bug {bug_id}:  Command '{test_command}' ran"
             f" with the return code {returncode}."
         )
 
@@ -457,6 +464,54 @@ def move_test_file(bug_id, bug_record, repo_path, separate_envs):
             test_file = repo_path / Path(test)
             with open(test_file, "w", encoding="utf-8") as file:
                 file.write(test_file_content[test])
+
+
+def get_test_command_and_env(
+    bug_id: str,
+    repo_path: Path,
+    bug_record: BugRecord,
+    test_status_record: Dict[str, str] | None,
+    timeout: int | None = None,
+    pip_output_redirection=None,
+    test_output_stdout=None,
+    separate_envs=False,
+) -> Tuple[Path, Path]:
+    commit_id = bug_record["fixed_commit_id"]
+
+    checkout(bug_id, repo_path, commit_id, separate_envs)
+
+    test_status_change = False
+
+    if not test_status_record:
+        test_status_record = {}
+
+    # Create virtualenv for dependencies, installing Python if necessary.
+    if separate_envs:
+        env_path, python_path = install_envs(
+            repo_path,
+            bug_id,
+            bug_record["bip_python_version"],
+            timeout,
+            pip_output_redirection,
+            False,
+        )
+    else:
+        env_path, python_path = extract_and_install_class(
+            repo_path.name,
+            bug_id,
+            bug_record["bip_python_version"],
+            timeout,
+            pip_output_redirection,
+            False,
+        )
+        install_dependencies(
+            bug_id, python_path, repo_path, timeout, pip_output_redirection
+        )
+
+    test_command = get_test_command(
+        bug_record["failing_test_command"], timeout, None, python_path
+    )
+    return python_path, test_command
 
 
 def prep(
