@@ -264,7 +264,7 @@ def convert_unittest_to_pytest(repo_path: Path, command: str) -> str:
     return "pytest " + " ".join(pytest_commands)
 
 
-def get_test_command(failing_test_commands, timeout, xml_output, python_path):
+def get_test_command(failing_test_commands, timeout, xml_output, python_path, repo_path):
     failing_test_commands = failing_test_commands.replace("python -m", "")
     failing_test_commands = failing_test_commands.replace("python3 -m", "")
     if "tox" in failing_test_commands:
@@ -315,7 +315,7 @@ def run_test(
     current_path = os.getcwd()
     os.chdir(repo_path)
     test_command = get_test_command(
-        failing_test_commands, timeout, xml_output, python_path
+        failing_test_commands, timeout, xml_output, python_path, repo_path
     )
     failed_as_expected = False
     returncode = 0
@@ -509,7 +509,7 @@ def get_test_command_and_env(
         )
 
     test_command = get_test_command(
-        bug_record["failing_test_command"], timeout, None, python_path
+        bug_record["failing_test_command"], timeout, None, python_path, repo_path
     )
     return python_path, test_command
 
