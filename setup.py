@@ -1,8 +1,12 @@
 from setuptools import setup, find_packages
+import os
 
-# Read requirements.txt and set it as the requirements for our package
-with open("requirements.txt", "r") as f:
+
+location = os.path.abspath(os.path.dirname(__file__))
+
+with open(os.path.join(location, "requirements.txt"), "r") as f:
     requirements = f.read().splitlines()
+
 
 setup(
     name="pyr_benchmark_wrangling",
