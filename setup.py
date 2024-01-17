@@ -1,13 +1,15 @@
 from setuptools import setup, find_packages
+import os
+from pathlib import Path
 
-
-#location = os.path.abspath(os.path.dirname(__file__))
+location = Path(os.path.abspath(os.path.dirname(__file__)))
 #with open(os.path.join(location, "requirements.txt"), "r") as f:
 #    requirements = f.read().splitlines()
 
 # For some reason tox fails during the above file read
 REQUIREMENTS = ["absl-py>=1.0.0,<2.0.0", "GitPython>=3.0.0,<4.0.0"] 
-with open('Readme.md', 'r') as fh:
+
+with open(location / 'Readme.md', 'r') as fh:
     long_description = fh.read()
 
 setup(
