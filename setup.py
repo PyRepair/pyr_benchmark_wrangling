@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 # For some reason tox fails during the above file read
 REQUIREMENTS = ["absl-py>=1.0.0,<2.0.0", "GitPython>=3.0.0,<4.0.0"] 
-with open('README.md', 'r') as fh:
+with open('Readme.md', 'r') as fh:
     long_description = fh.read()
 
 setup(
