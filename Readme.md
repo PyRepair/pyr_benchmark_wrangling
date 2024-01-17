@@ -203,12 +203,3 @@ metrics = measure_localisation_diff_file("diff_file.txt")
 # Extract locations from a diff file
 locations = locations_from_diff_file("diff_file.txt")
 ```
-
-# lmeasures
-
-
-# extract_localisation_set
-
-# Sample BIP
-
-# Class Extractor 
