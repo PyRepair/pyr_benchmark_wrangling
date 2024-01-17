@@ -7,11 +7,18 @@ from setuptools import setup, find_packages
 
 # For some reason tox fails during the above file read
 REQUIREMENTS = ["absl-py>=1.0.0,<2.0.0", "GitPython>=3.0.0,<4.0.0"] 
+with open('README.md', 'r') as fh:
+    long_description = fh.read()
 
 setup(
     name="pyr_benchmark_wrangling",
     version="0.0.1",
-    # If they are structured as proper Python packages, this should find both:
+    author="PyRepair Team",
+    author_email="nikhil.parasaram.19@ucl.ac.uk",
+    description="A package to facilitate data-wrangling for APR tools",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/PyRepair/pyr_benchmark_wrangling",
     packages=find_packages(include=["BugsInPy*", "diff_utils*"]),
     install_requires=REQUIREMENTS,
     entry_points={
@@ -24,4 +31,14 @@ setup(
         ]
     },
     include_package_data=True,
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "License :: OSI Approved :: Apache Software License",  # Updated to Apache License
+        "Operating System :: OS Independent",
+    ],
+    python_requires='>=3.10', 
+    license="Apache License 2.0",
 )
