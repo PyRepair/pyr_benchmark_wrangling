@@ -430,6 +430,82 @@ def get_class_data(file_path: Path, lineno: int) -> Optional[ClassInfo]:
     return None
 
 
+def filter_unused_imports(import_statements: List[str], code: str) -> List[str]:
+    direct_imports = set()  # Direct imports (import math)
+    attribute_imports = (
+        {}
+    )  # Attribute imports with optional aliases (from os import path as p)
+    aliases = {}  # Aliases mapping
+
+    for statement in import_statements:
+        try:
+            parsed = ast.parse(statement)
+            for node in ast.walk(parsed):
+                if isinstance(node, ast.Import):
+                    for name in node.names:
+                        direct_imports.add(name.name)
+                        if name.asname:
+                            aliases[name.asname] = name.name
+                elif isinstance(node, ast.ImportFrom):
+                    for name in node.names:
+                        imported_name = (
+                            f"{node.module}.{name.name}" if node.module else name.name
+                        )
+                        attribute_imports[name.asname or name.name] = imported_name
+                        if name.asname:
+                            aliases[name.asname] = imported_name
+        except SyntaxError:
+            pass
+
+    # Find used imports in the code
+    used_imports = set()
+    try:
+        tree = ast.parse(code)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name):
+                if node.id in aliases:  # Check if the name is an alias
+                    used_imports.add(aliases[node.id])
+                elif (
+                    node.id in attribute_imports
+                ):  # Check if the name is from attribute import
+                    used_imports.add(attribute_imports[node.id])
+                elif node.id in direct_imports:  # Check if the name is a direct import
+                    used_imports.add(node.id)
+    except SyntaxError:
+        pass
+
+    # Filter and return the used import statements
+    filtered_imports = []
+    for stmt in import_statements:
+        parsed = ast.parse(stmt)
+        for node in ast.walk(parsed):
+            if isinstance(node, ast.Import):
+                for name in node.names:
+                    if name.name in used_imports or name.asname in used_imports:
+                        filtered_imports.append(stmt)
+                        break
+            elif isinstance(node, ast.ImportFrom):
+                for name in node.names:
+                    full_name = (
+                        f"{node.module}.{name.name}" if node.module else name.name
+                    )
+                    if full_name in used_imports or name.asname in used_imports:
+                        filtered_imports.append(stmt)
+                        break
+    return filtered_imports
+
+
+def extract_import_statements(file_path):
+    with open(file_path, "r") as file:
+        file_content = file.read()
+    tree = ast.parse(file_content)
+    import_statements = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            import_statements.append(file_content[node.lineno - 1].strip())
+    return import_statements
+
+
 def extract_buggy_function(bug_record, repo_path):
     locations = locations_from_diff(bug_record["fixing_patch"])
     visited_code = set()
@@ -459,6 +535,11 @@ def extract_buggy_function(bug_record, repo_path):
                 variables[var] = list(function_data.variables[var])
             if function_data.code not in visited_code:
                 class_info = get_class_data(file_path, lineno)
+                import_statements = extract_import_statements(file_path)
+
+                used_imports = filter_unused_imports(
+                    import_statements, function_data.code
+                )
                 features[str(file_path)]["buggy_functions"].append(
                     {
                         "function_name": function_data.name,
@@ -473,6 +554,7 @@ def extract_buggy_function(bug_record, repo_path):
                         "filtered_variables": filter_python_keywords(variables),
                         "diff_line_number": lineno,
                         "class_data": asdict(class_info) if class_info else None,
+                        "used_imports": used_imports,
                     }
                 )
                 visited_code.add(function_data.code)
