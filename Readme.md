@@ -1,3 +1,7 @@
+[![PyPI](https://img.shields.io/pypi/v/pyr_benchmark_wrangling)](https://pypi.python.org/pypi/pyr_benchmark_wrangling)
+[![Run Tests and Deploy](https://github.com/PyRepair/pyr_benchmark_wrangling/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/PyRepair/pyr_benchmark_wrangling/actions/workflows/test.yml)
+[![Downloads](https://static.pepy.tech/badge/pyr_benchmark_wrangling)](https://pepy.tech/project/pyr_benchmark_wrangling)
+
 # Introduction
 Pyrepair Benchmark Wrangling is a Python package designed to facilitate and streamline the process of the data-wrangling benchmarks for Automated Program Repair (APR) tools. This package provides an easy-to-use command-line interface to interact with two main components: 
 - `BugsInPy` - a package to run BugsInPy benchmark (https://dl.acm.org/doi/abs/10.1145/3368089.3417943)
