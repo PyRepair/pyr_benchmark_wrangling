@@ -498,11 +498,15 @@ def filter_unused_imports(import_statements: List[str], code: str) -> List[str]:
 def extract_import_statements(file_path):
     with open(file_path, "r") as file:
         file_content = file.read()
+
     tree = ast.parse(file_content)
     import_statements = []
+
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
-            import_statements.append(file_content[node.lineno - 1].strip())
+            import_statement = ast.unparse(node)
+            import_statements.append(import_statement)
+
     return import_statements
 
 
@@ -510,7 +514,6 @@ def extract_buggy_function(bug_record, repo_path):
     locations = locations_from_diff(bug_record["fixing_patch"])
     visited_code = set()
     features: Dict = {}
-
     non_function_lines = []
     visited_lines = set()
     for file_path_str, lineno in locations:
