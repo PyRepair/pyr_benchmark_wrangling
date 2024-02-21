@@ -8,7 +8,7 @@ from ast import unparse
 from git import Repo, NoSuchPathError
 from pathlib import Path
 import subprocess
-from typing import Dict
+from typing import Dict, Union
 
 from BugsInPy.utils import checkout
 
@@ -16,11 +16,15 @@ from BugsInPy.bgp import BGPConfig, run_test, InvalidExecutionOrderError
 
 
 class ReplaceFunctionNode(ast.NodeTransformer):
-    def __init__(self, target_lineno: int, replacement_node: ast.FunctionDef):
+    def __init__(
+        self,
+        target_lineno: int,
+        replacement_node: Union[ast.FunctionDef, ast.AsyncFunctionDef],
+    ):
         self.target_lineno = target_lineno
         self.replacement_node = replacement_node
 
-    def visit_FunctionDef(self, node: ast.FunctionDef):
+    def visit_FunctionDef(self, node: Union[ast.FunctionDef, ast.AsyncFunctionDef]):
         # Check if the function has decorators
         start_lineno = node.lineno
         if node.decorator_list:
@@ -44,7 +48,9 @@ def replace_code(bug_data: Dict, repo_bug_id: str, file_path: Path) -> None:
 
     # Parse the replacement code to get its AST
     replacement_tree = ast.parse(replacement_code)
-    if not isinstance(replacement_tree.body[0], ast.FunctionDef):
+    if not isinstance(
+        replacement_tree.body[0], (ast.FunctionDef, ast.AsyncFunctionDef)
+    ):
         raise ValueError("Replacement code does not contain a function definition.")
 
     # Use the NodeTransformer to replace the original function with the replacement
