@@ -6,9 +6,9 @@ from BugsInPy.utils import checkout
 from .file_instrumenter import FileInstrumentor
 from .static_features import (
     extract_buggy_function,
-    code_to_node,
     extract_functions_and_variables_from_file,
 )
+from static_library import code_to_node
 from diff_utils import locations_from_diff
 from dataclasses import asdict, dataclass
 from pathlib import Path
