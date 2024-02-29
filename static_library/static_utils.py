@@ -1,13 +1,11 @@
 import ast
 import builtins
 import re
-from tracemalloc import start
-from typing import Any, Dict, List, Optional
-from diff_utils import locations_from_diff
+from typing import Dict, List, Optional
 import ast
 import keyword
 from pathlib import Path
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -81,9 +79,14 @@ def extract_function_signatures(code: str) -> List[str]:
 
     try:
         tree = ast.parse(code)
+        for node in ast.walk(tree):
+            for child in ast.iter_child_nodes(node):
+                child.parent = node
 
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(
+                node, (ast.FunctionDef, ast.AsyncFunctionDef)
+            ) and not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 signature = get_signature(node)
                 function_signatures.append(signature)
 
@@ -98,9 +101,15 @@ def extract_functions(code: str) -> List[str]:
 
     try:
         tree = ast.parse(code)
+        # Attach parents to nodes
+        for node in ast.walk(tree):
+            for child in ast.iter_child_nodes(node):
+                child.parent = node
 
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(
+                node, (ast.FunctionDef, ast.AsyncFunctionDef)
+            ) and not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 # Start line is initially set to the function's start line
                 start_line = node.lineno
 
@@ -175,9 +184,10 @@ def extract_functions_and_scope(code: str) -> Dict[str, List[Dict[str, str]]]:
                 node, ast.AsyncFunctionDef
             ):
                 # Ignore functions within classes, they'll be handled separately
-                if isinstance(node.parent, ast.ClassDef):
+                if isinstance(node.parent, ast.ClassDef) or isinstance(
+                    node.parent, (ast.AsyncFunctionDef, ast.FunctionDef)
+                ):
                     continue
-
                 start_line = node.lineno
                 end_line = node.end_lineno
                 for decorator in node.decorator_list:
@@ -199,7 +209,11 @@ def extract_functions_and_scope(code: str) -> Dict[str, List[Dict[str, str]]]:
                 }
 
                 for child in node.body:
-                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    if isinstance(
+                        child, (ast.FunctionDef, ast.AsyncFunctionDef)
+                    ) and not isinstance(
+                        child.parent, (ast.FunctionDef, ast.AsyncFunctionDef)
+                    ):
                         start_line = child.lineno
                         end_line = child.end_lineno
                         start_line = child.lineno
