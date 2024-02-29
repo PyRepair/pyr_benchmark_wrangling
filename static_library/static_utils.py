@@ -2,7 +2,7 @@ import ast
 import builtins
 import re
 from tracemalloc import start
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from diff_utils import locations_from_diff
 import ast
 import keyword
@@ -82,44 +82,6 @@ def extract_function_signatures(code: str) -> List[str]:
     try:
         tree = ast.parse(code)
 
-        def get_signature(node):
-            args = []
-            for arg in node.args.args:
-                arg_str = arg.arg
-                if arg.annotation:
-                    # Include type hint if present
-                    type_hint = ast.unparse(arg.annotation)
-                    arg_str += f": {type_hint}"
-                args.append(arg_str)
-
-            defaults = [ast.unparse(d) for d in node.args.defaults]
-            defaults = ["=" + d for d in defaults]
-            params = [
-                arg + default
-                for arg, default in zip(
-                    args, [""] * (len(args) - len(defaults)) + defaults
-                )
-            ]
-
-            if node.args.vararg:
-                vararg = "*" + node.args.vararg.arg
-                if node.args.vararg.annotation:
-                    vararg += f": {ast.unparse(node.args.vararg.annotation)}"
-                params.append(vararg)
-
-            if node.args.kwarg:
-                kwarg = "**" + node.args.kwarg.arg
-                if node.args.kwarg.annotation:
-                    kwarg += f": {ast.unparse(node.args.kwarg.annotation)}"
-                params.append(kwarg)
-
-            signature = f"{node.name}({', '.join(params)})"
-            if node.returns:
-                # Include return type hint if present
-                return_type_hint = ast.unparse(node.returns)
-                signature += f" -> {return_type_hint}"
-            return signature
-
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 signature = get_signature(node)
@@ -161,9 +123,127 @@ def extract_functions(code: str) -> List[str]:
     return functions
 
 
+def get_signature(node):
+    args = []
+    for arg in node.args.args:
+        arg_str = arg.arg
+        if arg.annotation:
+            # Include type hint if present
+            type_hint = ast.unparse(arg.annotation)
+            arg_str += f": {type_hint}"
+        args.append(arg_str)
+
+    defaults = [ast.unparse(d) for d in node.args.defaults]
+    defaults = ["=" + d for d in defaults]
+    params = [
+        arg + default
+        for arg, default in zip(args, [""] * (len(args) - len(defaults)) + defaults)
+    ]
+
+    if node.args.vararg:
+        vararg = "*" + node.args.vararg.arg
+        if node.args.vararg.annotation:
+            vararg += f": {ast.unparse(node.args.vararg.annotation)}"
+        params.append(vararg)
+
+    if node.args.kwarg:
+        kwarg = "**" + node.args.kwarg.arg
+        if node.args.kwarg.annotation:
+            kwarg += f": {ast.unparse(node.args.kwarg.annotation)}"
+        params.append(kwarg)
+
+    signature = f"{node.name}({', '.join(params)})"
+    if node.returns:
+        # Include return type hint if present
+        return_type_hint = ast.unparse(node.returns)
+        signature += f" -> {return_type_hint}"
+    return signature
+
+
+def extract_functions_and_scope(code: str) -> Dict[str, List[Dict[str, str]]]:
+    result = {"file_scope_functions": [], "file_scope_classes": []}
+
+    try:
+        tree = ast.parse(code)
+        # Attach parents to nodes
+        for node in ast.walk(tree):
+            for child in ast.iter_child_nodes(node):
+                child.parent = node
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) or isinstance(
+                node, ast.AsyncFunctionDef
+            ):
+                # Ignore functions within classes, they'll be handled separately
+                if isinstance(node.parent, ast.ClassDef):
+                    continue
+
+                start_line = node.lineno
+                end_line = node.end_lineno
+                for decorator in node.decorator_list:
+                    start_line = min(start_line, decorator.lineno)
+
+                function_code_lines = code.splitlines()[start_line - 1 : end_line]
+                function_code = "\n".join(function_code_lines)
+                function_code = remove_indentation(function_code)
+                signature = get_signature(node)
+
+                result["file_scope_functions"].append(
+                    {"code": function_code, "signature": signature}
+                )
+
+            elif isinstance(node, ast.ClassDef):
+                class_info = {
+                    "class_declaration": f"class {node.name}:",
+                    "functions": [],
+                }
+
+                for child in node.body:
+                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        start_line = child.lineno
+                        end_line = child.end_lineno
+                        start_line = child.lineno
+                        end_line = child.end_lineno
+                        for decorator in child.decorator_list:
+                            start_line = min(start_line, decorator.lineno)
+
+                        function_code_lines = code.splitlines()[
+                            start_line - 1 : end_line
+                        ]
+                        function_code = "\n".join(function_code_lines)
+                        function_code = remove_indentation(function_code)
+                        signature = get_signature(child)
+
+                        class_info["functions"].append(
+                            {"code": function_code, "signature": signature}
+                        )
+
+                result["file_scope_classes"].append(class_info)
+
+    except SyntaxError:
+        pass
+
+    return result
+
+
+def extract_function_code(node: ast.AST, code: str) -> str:
+    """Extracts the code of a function or method from its AST node."""
+    start_line = node.lineno
+    # Check decorators for an earlier start line
+    for decorator in node.decorator_list:
+        start_line = min(start_line, decorator.lineno)
+    end_line = node.end_lineno
+
+    # Extract the function code from the original source
+    function_code_lines = code.splitlines()[start_line - 1 : end_line]
+    function_code = "\n".join(function_code_lines)
+    function_code = remove_indentation(function_code)
+    return function_code
+
+
 def extract_functions_from_file(file_path):
     with open(file_path, "r") as file:
-        return extract_functions(file.read())
+        return extract_functions_and_scope(file.read())
 
 
 def extract_function_signatures_from_file(file_path):

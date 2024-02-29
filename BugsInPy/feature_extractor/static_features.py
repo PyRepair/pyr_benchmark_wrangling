@@ -102,12 +102,10 @@ def extract_functions_and_variables_from_file(features: Dict):
         if file_path == "test_data":
             continue
         functions = extract_functions_from_file(file_path)
-        function_signatures = extract_function_signatures_from_file(file_path)
         variables = extract_variables_from_file(file_path)
         for var in variables:
             variables[var] = list(variables[var])
         features[file_path]["inscope_functions"] = functions
-        features[file_path]["inscope_function_signatures"] = function_signatures
         features[file_path]["variables_in_file"] = variables
         features[file_path]["filtered_variables_in_file"] = filter_python_keywords(
             variables
