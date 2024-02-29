@@ -86,7 +86,7 @@ def extract_function_signatures(code: str) -> List[str]:
         for node in ast.walk(tree):
             if isinstance(
                 node, (ast.FunctionDef, ast.AsyncFunctionDef)
-            ) and not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            ) and not isinstance(node.parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 signature = get_signature(node)
                 function_signatures.append(signature)
 
@@ -109,7 +109,7 @@ def extract_functions(code: str) -> List[str]:
         for node in ast.walk(tree):
             if isinstance(
                 node, (ast.FunctionDef, ast.AsyncFunctionDef)
-            ) and not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            ) and not isinstance(node.parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 # Start line is initially set to the function's start line
                 start_line = node.lineno
 
