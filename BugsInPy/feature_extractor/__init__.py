@@ -1,19 +1,5 @@
-import ast
-import builtins
-import subprocess
-import os
-import re
-from typing import Dict, Set, Tuple, List, Optional
-from BugsInPy.utils import checkout
 from BugsInPy.test_runner import move_test_file
-from diff_utils import locations_from_diff
-import ast
-import keyword
-import shutil
 
-from pathlib import Path
-from dataclasses import asdict, dataclass, field
-from os.path import commonpath
 
 from .dynamic_features import extract_dynamic_features
 from .static_features import (
