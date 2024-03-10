@@ -705,7 +705,7 @@ def install_test_dependencies(
         elif "sanic" in repo:
             subprocess.run(
                 f"{python_path} -m pip install pytest==5.2.1"
-                " pytest-sanic==1.6.1 pytest-sugar==0.9.3 pytest-timeout",
+                " pytest-sanic==1.6.1 pytest-sugar==0.9.3 pytest-timeout<2.2.1",
                 shell=True,
                 check=True,
                 timeout=BGPConfig.TIMEOUT_MULTIPLIER * timeout,
@@ -714,7 +714,7 @@ def install_test_dependencies(
             )
         elif "thefuck" in repo:
             subprocess.run(
-                f"{python_path} -m pip install pytest==3.10.0 pytest-timeout"
+                f"{python_path} -m pip install pytest==3.10.0 pytest-timeout<2.2.1"
                 " pytest-mock pytest-cov",
                 shell=True,
                 check=True,
@@ -725,7 +725,7 @@ def install_test_dependencies(
         elif "PySnooper" in repo:
             try:
                 subprocess.run(
-                    f"{python_path} -m pip install six pytest-timeout pytest"
+                    f"{python_path} -m pip install six pytest-timeout pytest<2.2.1"
                     " python_toolbox",
                     shell=True,
                     check=True,
@@ -738,7 +738,7 @@ def install_test_dependencies(
 
         else:
             subprocess.run(
-                f"{python_path} -m pip install pytest pytest-timeout"
+                f"{python_path} -m pip install pytest pytest-timeout<2.2.1"
                 " pytest-mock pytest-cov",
                 shell=True,
                 check=True,
