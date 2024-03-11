@@ -58,7 +58,7 @@ def get_function_def_range(source_code: str, start_lineno: int) -> Tuple[int, in
     return start_lineno, None  # Fallback in case no matching function is found
 
 
-def get_diff(lineno: int, replacement_code: str, source_code: str) -> None:
+def get_diff(lineno: int, replacement_code: str, source_code: str) -> str:
     """
     This function returns the diff of the replacement code with the current code
     """
