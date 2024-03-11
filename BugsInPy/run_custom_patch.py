@@ -9,7 +9,7 @@ from ast import unparse
 from git import Repo, NoSuchPathError
 from pathlib import Path
 import subprocess
-from typing import Dict, List, Union, Tuple
+from typing import Any, Dict, List, Union, Tuple
 
 from BugsInPy.utils import checkout
 
@@ -201,7 +201,7 @@ def main():
             test_status_records = json.load(test_status_records_file)
 
     bug_list = bug_records.keys()
-    output_dict = {}
+    output_dict: Dict[str, Any] = {}
     for repo, repo_data in data.items():
         for bug_data in repo_data:
             bug_id = bug_data["bugID"]
@@ -259,11 +259,12 @@ def main():
                 replacement_code = bug_data["replace_code"]
                 with file_path.open("r", encoding="utf-8") as source_file:
                     source_code = source_file.read()
-                return_code = get_diff(lineno, replacement_code, source_code)
+                diff_code = get_diff(lineno, replacement_code, source_code)
                 if args.get_diff_with_patch:
                     checkout(
                         bug_id, repo_path, bug_records[repo_bug_id]["buggy_commit_id"]
                     )
+                output_dict[repo_bug_id] = diff_code
             else:
                 replace_code(bug_data, repo_bug_id, file_path)
                 return_code = run_test(
@@ -287,9 +288,9 @@ def main():
                         test_output_stdout=subprocess.DEVNULL,
                     )
 
-            output_dict[repo_bug_id] = return_code
-            with file_path.open("w", encoding="utf-8") as source_file:
-                source_file.write(store_source_code)
+                output_dict[repo_bug_id] = return_code
+                with file_path.open("w", encoding="utf-8") as source_file:
+                    source_file.write(store_source_code)
 
     write_json(args.output_file, output_dict)
 
