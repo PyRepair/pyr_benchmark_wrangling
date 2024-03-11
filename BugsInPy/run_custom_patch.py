@@ -1,5 +1,6 @@
 import argparse
 import ast
+import difflib
 import json
 import os
 
@@ -8,7 +9,7 @@ from ast import unparse
 from git import Repo, NoSuchPathError
 from pathlib import Path
 import subprocess
-from typing import Dict, Union
+from typing import Dict, List, Union, Tuple
 
 from BugsInPy.utils import checkout
 
@@ -35,6 +36,44 @@ class ReplaceFunctionNode(ast.NodeTransformer):
         if start_lineno == self.target_lineno:
             return self.replacement_node
         return node
+
+
+def get_function_def_range(source_code: str, start_lineno: int) -> Tuple[int, int]:
+    """
+    Parse the source code using AST to find the function definition that starts at `start_lineno`.
+    Returns the start and end line numbers of the function.
+    """
+    tree = ast.parse(source_code)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            t_line = node.lineno
+            if node.decorator_list:
+                # Adjust the start line number to the first decorator's line number
+                t_line = node.decorator_list[0].lineno
+            if t_line == start_lineno:
+                end_lineno = (
+                    node.end_lineno if hasattr(node, "end_lineno") else start_lineno
+                )
+                return start_lineno, end_lineno
+    return start_lineno, None  # Fallback in case no matching function is found
+
+
+def get_diff(lineno: int, replacement_code: str, source_code: str) -> None:
+    """
+    This function returns the diff of the replacement code with the current code
+    """
+    start_line, end_line = get_function_def_range(source_code, lineno)
+    original_code_lines = source_code.split("\n")[start_line - 1 : end_line]
+    for i in range(len(original_code_lines)):
+        original_code_lines[i] += "\n"
+    replacement_lines = replacement_code.splitlines(keepends=True)
+    diff = difflib.unified_diff(
+        original_code_lines,
+        replacement_lines,
+        fromfile="Original",
+        tofile="Replacement",
+    )
+    return "".join(diff)
 
 
 def replace_code(bug_data: Dict, repo_bug_id: str, file_path: Path) -> None:
@@ -133,6 +172,18 @@ def main():
     parser.add_argument(
         "--timeout", type=int, default=60, help="A timeout for test runs."
     )
+    parser.add_argument(
+        "--get-diff",
+        action="store_true",
+        default=False,
+        help="Applies the Diff",
+    )
+    parser.add_argument(
+        "--get-diff-with-patch",
+        action="store_true",
+        default=False,
+        help="Applies the Diff",
+    )
 
     args = parser.parse_args()
 
@@ -199,18 +250,22 @@ def main():
             with file_path.open("r", encoding="utf-8") as source_file:
                 store_source_code = source_file.read()
 
-            replace_code(bug_data, repo_bug_id, file_path)
-            return_code = run_test(
-                repo_bug_id,
-                repo_path,
-                python_path,
-                bug_records[repo_bug_id]["failing_test_command"],
-                failing=False,
-                timeout=args.timeout,
-                test_output_stdout=subprocess.DEVNULL,
-            )
-            if return_code != 0 and bug_data.get("import_list", []) != []:
-                add_imports(bug_data, repo_bug_id, file_path)
+            if args.get_diff or args.get_diff_with_patch:
+                if args.get_diff_with_patch:
+                    checkout(
+                        bug_id, repo_path, bug_records[repo_bug_id]["fixed_commit_id"]
+                    )
+                lineno = int(bug_data["start_line"])
+                replacement_code = bug_data["replace_code"]
+                with file_path.open("r", encoding="utf-8") as source_file:
+                    source_code = source_file.read()
+                return_code = get_diff(lineno, replacement_code, source_code)
+                if args.get_diff_with_patch:
+                    checkout(
+                        bug_id, repo_path, bug_records[repo_bug_id]["buggy_commit_id"]
+                    )
+            else:
+                replace_code(bug_data, repo_bug_id, file_path)
                 return_code = run_test(
                     repo_bug_id,
                     repo_path,
@@ -220,6 +275,17 @@ def main():
                     timeout=args.timeout,
                     test_output_stdout=subprocess.DEVNULL,
                 )
+                if return_code != 0 and bug_data.get("import_list", []) != []:
+                    add_imports(bug_data, repo_bug_id, file_path)
+                    return_code = run_test(
+                        repo_bug_id,
+                        repo_path,
+                        python_path,
+                        bug_records[repo_bug_id]["failing_test_command"],
+                        failing=False,
+                        timeout=args.timeout,
+                        test_output_stdout=subprocess.DEVNULL,
+                    )
 
             output_dict[repo_bug_id] = return_code
             with file_path.open("w", encoding="utf-8") as source_file:
