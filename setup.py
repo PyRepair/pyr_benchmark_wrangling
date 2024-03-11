@@ -14,7 +14,7 @@ with open(location / "Readme.md", "r") as fh:
 
 setup(
     name="pyr_benchmark_wrangling",
-    version="0.0.8",
+    version="0.0.9",
     author="PyRepair Team",
     author_email="nikhil.parasaram.19@ucl.ac.uk",
     description="A package to facilitate data-wrangling for APR tools",
