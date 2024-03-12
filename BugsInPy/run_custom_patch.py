@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Union, Tuple
 from BugsInPy.utils import checkout
 
 from BugsInPy.bgp import BGPConfig, run_test, InvalidExecutionOrderError
+from static_library.static_utils import remove_indentation
 
 
 class ReplaceFunctionNode(ast.NodeTransformer):
@@ -63,7 +64,10 @@ def get_diff(lineno: int, replacement_code: str, source_code: str) -> str:
     This function returns the diff of the replacement code with the current code
     """
     start_line, end_line = get_function_def_range(source_code, lineno)
-    original_code_lines = source_code.split("\n")[start_line - 1 : end_line]
+    replacement_code = remove_indentation(replacement_code)
+    original_code_lines = remove_indentation(
+        "\n".join(source_code.split("\n")[start_line - 1 : end_line])
+    ).split("\n")
     for i in range(len(original_code_lines)):
         original_code_lines[i] += "\n"
     replacement_lines = replacement_code.splitlines(keepends=True)
