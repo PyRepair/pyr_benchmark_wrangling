@@ -295,13 +295,13 @@ def write_localisation_measures_to_csv(data: Dict[str, Any], csv_file: str) -> N
     flat_data = []
 
     for key, values in data.items():
-        for i, (file, value) in enumerate(values, start=1):
-            flattened_entry = {
-                "file": key,
-                f"location{i}_file": file,
-                f"location{i}_value": value,
-            }
-            flat_data.append(flattened_entry)
+        
+        flattened_entry = {"patch": key}
+        
+        for diff_key, diff_value in values.items():
+            flattened_entry[diff_key] = diff_value
+        
+        flat_data.append(flattened_entry)
 
     if not flat_data:
         return
